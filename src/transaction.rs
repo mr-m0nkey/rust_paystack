@@ -4,8 +4,10 @@ use dotenv::dotenv;
 use reqwest::Result;
 use serde::{Deserialize, Serialize};
 use std::env;
+use std::fmt;
 
 const INITIATE_TRANSACTION_URL: &'static str = "https://api.paystack.co/transaction/initialize";
+const VERIFY_TRANSACTION_URL: &'static str = "https://api.paystack.co/transaction/verify/";
 
 pub enum TransactionChannel {
     Card,
@@ -16,6 +18,7 @@ pub enum TransactionChannel {
     BankTransfer,
 }
 
+#[derive(Serialize, Deserialize)]
 pub enum Currency {
     Ngn,
     Ghs,
@@ -89,7 +92,7 @@ pub async fn initiate_transaction(transaction: &NewTransaction) -> Result<reqwes
 
     let request_json = serde_json::to_string(&transaction).unwrap();
 
-    println!("request = {}", request_json);
+    println!("request = {}", request_json); //TODO add debug checker
 
     let client = reqwest::Client::new();
     let res = client
@@ -100,4 +103,23 @@ pub async fn initiate_transaction(transaction: &NewTransaction) -> Result<reqwes
         .await?;
 
     Ok(res)
+}
+
+pub async fn verify_transaction(reference: &str) -> Result<reqwest::Response> {
+    dotenv().ok();
+
+    let secret_key = env::var("SECRET_KEY").unwrap();
+    
+    let mut url = VERIFY_TRANSACTION_URL.to_owned();
+    url.push_str(reference);
+
+    let client = reqwest::Client::new();
+    let res = client
+        .get(url)
+        .bearer_auth(secret_key)
+        .send()
+        .await?;
+
+    Ok(res)
+
 }
